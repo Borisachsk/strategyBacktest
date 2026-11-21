@@ -21,3 +21,7 @@ ret = ret.fillna(0.0)
 equity = (1 + ret).cumprod()
 assert np.isclose(equity.iloc[-1], px.iloc[-1] / px.iloc[0])
 print("Check passed")
+
+fast = px.rolling(50).mean()
+slow = px.rolling(200).mean()
+
