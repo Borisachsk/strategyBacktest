@@ -5,6 +5,10 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+
+def equity_curve(returns):
+    return (1 + returns).cumprod()
+
 csvPath = Path("data/spy.csv")
 
 if csvPath.is_file():
@@ -25,3 +29,24 @@ print("Check passed")
 fast = px.rolling(50).mean()
 slow = px.rolling(200).mean()
 
+signal = (fast > slow).astype(float)
+
+position = signal.shift(1).fillna(0.0)
+
+strat_ret = position * ret
+leaky_ret = signal * ret
+
+eq_bh = equity_curve(ret)
+eq_strat = equity_curve(strat_ret)
+eq_leaky = equity_curve(leaky_ret)
+
+print(f"Buy&Hold: {eq_bh.iloc[-1]:.2f} |"
+      f"Со сдвигом: {eq_strat.iloc[-1]:.2f} |"
+      f"без сдвига: {eq_leaky.iloc[-1]:.2f}")
+plt.figure(figsize=(12, 6))
+eq_bh.plot(label="Buy & hold")
+eq_strat.plot(label="MA 50/200 (со сдвигом)")
+eq_leaky.plot(label="MA 50/200 (без сдвига, нечестно)")
+plt.yscale("log")
+plt.legend()
+plt.savefig("equity_compare.png")
