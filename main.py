@@ -9,17 +9,22 @@ import os
 def equity_curve(returns):
     return (1 + returns).cumprod()
 
-csvPath = Path("data/spy.csv")
+print("Input the ticker(default: SPY)")
+ticker = input().strip().upper() or "SPY"
+
+print("Input the start point(default: 2005-01-01)")
+startpoint = input() or "2005-01-01"
+
+csvPath = Path(f"data/{ticker}-{startpoint}.csv")
 csvPath.parent.mkdir(exist_ok=True)
 
 if csvPath.is_file():
     print("Data already downloaded")
-    px = pd.read_csv("data/spy.csv", index_col=0, parse_dates=True).squeeze("columns")
+    px = pd.read_csv(f"data/{ticker}-{startpoint}.csv", index_col=0, parse_dates=True).squeeze("columns")
 else:
     print("No csv found. Downloading")
-    csvPath = Path("data/spy.csv")
-    px = yf.download('SPY', start="2005-01-01", auto_adjust=True)["Close"].squeeze("columns")
-    px.to_csv("data/spy.csv")
+    px = yf.download(ticker, start=startpoint, auto_adjust=True)["Close"].squeeze("columns")
+    px.to_csv(f"data/{ticker}-{startpoint}.csv")
 
 ret = px.pct_change()
 ret = ret.fillna(0.0)
