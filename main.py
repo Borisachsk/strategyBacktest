@@ -58,9 +58,12 @@ assert np.isclose(equity.iloc[-1], px.iloc[-1] / px.iloc[0])
 print("Check passed")
 
 signal = rolling_strategy(px,50,200)
+signal2 = rolling_strategy(px,20,100)
+
 cost = 0.001
 ret_noncost = backtest(ret, signal, 0.0)
 ret_cost = backtest(ret, signal, cost)
+ret2 = backtest(ret,signal2,cost)
 
 eq_bh = equity_curve(ret)
 eq_strat = equity_curve(ret_noncost)
@@ -68,13 +71,16 @@ eq_leaky = equity_curve(signal * ret)
 eq_strat_commission = equity_curve(ret_cost)
 
 position = signal.shift(1).fillna(0.0)
+position2 = signal2.shift(1).fillna(0.0)
+
 ones = pd.Series(1.0, index=ret.index)
 
 results = {
     "Buy&Hold": metrics(ret,ones),
     "Со сдвигом": metrics(ret_noncost, position),
     "Без сдвига": metrics(signal * ret, signal),
-    "C Коммисией": metrics(ret_cost, position)
+    "C Коммисией": metrics(ret_cost, position),
+    "MA 20/100": metrics(ret2,position2)
 }
 
 print(f"Buy&Hold: {eq_bh.iloc[-1]:.2f} |"
