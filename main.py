@@ -4,7 +4,9 @@ import yfinance as yf
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+from matplotlib.ticker import PercentFormatter
+
+Path("plots").mkdir(exist_ok=True)
 
 def equity_curve(returns):
     return (1 + returns).cumprod()
@@ -58,45 +60,85 @@ def strategy(ret,signal,cost):
     ret_cost = backtest(ret,signal,cost)
     return metrics(ret_cost,position)
 
-print("Input the ticker(default: SPY)")
-ticker = input().strip().upper() or "SPY"
+def metrics_count(all_results,metrics_name):
+    metrics_table = {}
+    for ticker, results in all_results.items():
+        row = {}
+        for name, m in results.items():
+            row[name] = m[metrics_name]
+        metrics_table[ticker] = row
+    return metrics_table
 
-print("Input the start point(default: 2005-01-01)")
-startpoint = input().strip() or "2005-01-01"
+def run_ticker(ticker,startpoint,cost):
+    px = load_prices(ticker,startpoint)
+    ret = px.pct_change().fillna(0.0)
+    signals = {
+        "MA 50/200": rolling_strategy(px,50,200),
+        "MA 20/100": rolling_strategy(px,20,100),
+        "Turtle 55/20": turtle_trading(px,55,20),
+    }
+    equities = {"Buy&Hold": equity_curve(ret)}
 
-px = load_prices(ticker, startpoint)
-ret = px.pct_change()
-ret = ret.fillna(0.0)
+    ones = pd.Series(1.0,index=ret.index)
+    results = {"Buy&Hold": metrics(ret,ones)}
 
-equity = equity_curve(ret)
+    for name, sig in signals.items():
+        results[name] = strategy(ret,sig,cost)
+        equities[name] = equity_curve(backtest(ret,sig,cost))
+    return results,equities
 
-assert np.isclose(equity.iloc[-1], px.iloc[-1] / px.iloc[0])
+def plot_ticker(ticker,equities,filename=None, show=True):
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(12,8), sharex=True, gridspec_kw={"height_ratios": [3,1]})
 
-print("Check passed")
+    for name, curve in equities.items():
+        dd = curve / curve.cummax() - 1
+        if name == "Buy&Hold":
+            ax1.plot(curve.index, curve, label=name, color="black", linewidth=1)
+            ax2.fill_between(dd.index, dd, 0, color="gray", alpha=0.3)
+        else:
+            ax1.plot(curve.index, curve, label=name, linewidth=1.5)
+            ax2.plot(dd.index, dd, linewidth=1.2)
 
+    ax1.set_yscale("log")
+    ax1.set_title(f"{ticker}: капитал(лог. шкала)")
+    ax1.set_ylabel("Капитал")
+    ax1.grid(True,alpha=0.3)
+    ax1.legend(loc="upper left")
+
+    ax2.set_title("Просадка (серая заливка: Buy&Hold)")
+    ax2.set_ylabel("Просадка")
+    ax2.yaxis.set_major_formatter(PercentFormatter(1.0))
+    ax2.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    if filename:
+        fig.savefig(filename,dpi=150,bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+tickers = ["SPY","QQQ","GLD","TLT","EEM"]
+startpoint = "2005-01-01"
 cost = 0.001
 
-signals = {
-    "MA 50/200": rolling_strategy(px,50,200),
-    "MA 20/100": rolling_strategy(px,20,100),
-    "Turtle 55/20": turtle_trading(px,55,20),
-}
+all_results = {}
+all_equities = {}
+for ticker in tickers:
+    all_results[ticker], all_equities[ticker] = run_ticker(ticker,startpoint,cost)
 
-ones = pd.Series(1.0, index=ret.index)
-results = {"Buy&Hold": metrics(ret,ones)}
-equities = {"Buy&Hold": equity_curve(ret)}
+print("Sharpe")
+print(pd.DataFrame(metrics_count(all_results,"Sharpe")).round(3))
+print("")
+print("MaxDD")
+print(pd.DataFrame(metrics_count(all_results,"MaxDD")).round(3))
+print("")
+print("CAGR")
+print(pd.DataFrame(metrics_count(all_results,"CAGR")).round(3))
+print("")
+print("Trades")
+print(pd.DataFrame(metrics_count(all_results,"Trades")).round(3))
 
-for name, sig in signals.items():
-    equities[name] = equity_curve(backtest(ret,sig,cost))
-    results[name] = strategy(ret,sig,cost)
-
-
-print(pd.DataFrame(results).round(3))
-
-plt.figure(figsize=(12, 6))
-for name, curve in equities.items():
-    curve.plot(label=name)
-plt.title(ticker)
-plt.yscale("log")
-plt.legend()
-plt.show()
+for ticker in tickers:
+    plot_ticker(ticker,all_equities[ticker],filename=f"plots/{ticker}.png", show=False)
+plot_ticker("SPY", all_equities["SPY"])
