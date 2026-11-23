@@ -20,11 +20,11 @@ It's a learning project. I'm not claiming to have found anything you could trade
 
 SPY:
 
-![SPY](screenshots/spy.png)
+![SPY](plots/SPY.png)
 
 QQQ:
 
-![QQQ](screenshots/qqq.png)
+![QQQ](plots/QQW.png)
 
 The top panel is the equity curve on a log scale. The bottom one shows drawdowns, and the grey area is Buy & Hold.
 
