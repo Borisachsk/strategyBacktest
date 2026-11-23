@@ -98,10 +98,12 @@ nix-shell
 python3 main.py
 ```
 
-Without Nix:
+Without Nix, using a virtual environment:
 
 ```
-pip install numpy pandas yfinance matplotlib
+python3 -m venv .venv
+source .venv/bin/activate        # on Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 python3 main.py
 ```
 
