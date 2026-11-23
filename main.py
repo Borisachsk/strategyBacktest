@@ -15,7 +15,6 @@ def load_prices(ticker, startpoint):
     csvPath = Path(f"data/{ticker}-{startpoint}.csv")
     csvPath.parent.mkdir(exist_ok=True)
     if csvPath.is_file():
-        print("Data already downloaded")
         px = pd.read_csv(csvPath, index_col=0, parse_dates=True).squeeze("columns")
     else:
         print("No csv found. Downloading")
@@ -101,13 +100,13 @@ def plot_ticker(ticker,equities,filename=None, show=True):
             ax2.plot(dd.index, dd, linewidth=1.2)
 
     ax1.set_yscale("log")
-    ax1.set_title(f"{ticker}: капитал(лог. шкала)")
-    ax1.set_ylabel("Капитал")
+    ax1.set_title(f"{ticker}: Equity(log scale)")
+    ax1.set_ylabel("Equity")
     ax1.grid(True,alpha=0.3)
     ax1.legend(loc="upper left")
 
-    ax2.set_title("Просадка (серая заливка: Buy&Hold)")
-    ax2.set_ylabel("Просадка")
+    ax2.set_title("Drawdown (grey filling: Buy&Hold)")
+    ax2.set_ylabel("Drawdown")
     ax2.yaxis.set_major_formatter(PercentFormatter(1.0))
     ax2.grid(True, alpha=0.3)
 
