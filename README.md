@@ -24,7 +24,7 @@ SPY:
 
 QQQ:
 
-![QQQ](plots/QQW.png)
+![QQQ](plots/QQQ.png)
 
 The top panel is the equity curve on a log scale. The bottom one shows drawdowns, and the grey area is Buy & Hold.
 
