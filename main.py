@@ -53,6 +53,11 @@ def metrics(returns, positions):
     trades = (abs(positions.diff()).fillna(0.0) > 0).sum()
     return {"CAGR": cagr, "MaxDD": maxdd, "Sharpe": sharpe,"Trades": trades}
 
+def strategy(ret,signal,cost):
+    position = signal.shift(1).fillna(0.0)
+    ret_cost = backtest(ret,signal,cost)
+    return metrics(ret_cost,position)
+
 print("Input the ticker(default: SPY)")
 ticker = input().strip().upper() or "SPY"
 
@@ -69,46 +74,28 @@ assert np.isclose(equity.iloc[-1], px.iloc[-1] / px.iloc[0])
 
 print("Check passed")
 
-signal = rolling_strategy(px,50,200)
-signal2 = rolling_strategy(px,20,100)
-signal3 = turtle_trading(px,20,10)
-
 cost = 0.001
-ret_noncost = backtest(ret, signal, 0.0)
-ret_cost = backtest(ret, signal, cost)
-ret2 = backtest(ret,signal2,cost)
-ret3 = backtest(ret,signal3, cost)
 
-eq_bh = equity_curve(ret)
-eq_ma50200 = equity_curve(ret_cost)
-eq_ma20100 = equity_curve(ret2)
-eq_turtle_trading = equity_curve(ret3)
-
-position = signal.shift(1).fillna(0.0)
-position2 = signal2.shift(1).fillna(0.0)
-position3 = signal3.shift(1).fillna(0.0)
-
-ones = pd.Series(1.0, index=ret.index)
-
-results = {
-    "Buy&Hold": metrics(ret,ones),
-    "MA 50/200": metrics(ret_cost, position),
-    "MA 20/100": metrics(ret2,position2),
-    "Turtle Trading": metrics(ret3,position3)
+signals = {
+    "MA 50/200": rolling_strategy(px,50,200),
+    "MA 20/100": rolling_strategy(px,20,100),
+    "Turtle 55/20": turtle_trading(px,55,20),
 }
 
-print(f"Buy&Hold: {eq_bh.iloc[-1]:.2f} | "
-      f"MA 50/200: {eq_ma50200.iloc[-1]:.2f} | "
-      f"MA 20/100: {eq_ma20100.iloc[-1]:.2f} | "
-      f"Turtle Trading: {eq_turtle_trading.iloc[-1]:.2f}")
+ones = pd.Series(1.0, index=ret.index)
+results = {"Buy&Hold": metrics(ret,ones)}
+equities = {"Buy&Hold": equity_curve(ret)}
+
+for name, sig in signals.items():
+    equities[name] = equity_curve(backtest(ret,sig,cost))
+    results[name] = strategy(ret,sig,cost)
+
 
 print(pd.DataFrame(results).round(3))
 
 plt.figure(figsize=(12, 6))
-eq_bh.plot(label="Buy & hold")
-eq_ma50200.plot(label="MA 50/200")
-eq_ma20100.plot(label="MA 20/100")
-eq_turtle_trading.plot(label="Turtle trading")
+for name, curve in equities.items():
+    curve.plot(label=name)
 plt.title(ticker)
 plt.yscale("log")
 plt.legend()
